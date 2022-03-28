@@ -1,0 +1,3 @@
+[submodule "vay-k-web"]
+	path = vay-k-web
+	url = https://github.com/ewang329/vay-k-web
