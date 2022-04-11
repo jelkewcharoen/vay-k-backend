@@ -3,7 +3,8 @@ import pymysql
 
 app = Flask(__name__)
 
-con = pymysql.connect(host = 'localhost', user = 'root', password = '', database = 'VayK')
+con = pymysql.connect(host = 'vayk-database.c23p9o6zuvtv.us-east-1.rds.amazonaws.com', user = 'general', password = '[u{;J<r`{ssVb-54', database = 'VayK')
+#con = pymysql.connect(host = 'localhost', user = 'root', password = '', database = 'VayK')
 cursor = con.cursor()
 
 @app.route("/")
@@ -13,12 +14,12 @@ def hello():
 @app.route("/trips", methods=['GET', 'POST'])
 def getTrips():
     if request.method == 'GET': 
-        cursor.execute(''' SELECT trip_name, date(start_date), date(end_date) FROM trip ''')
+        cursor.execute(''' SELECT title, date(startDate), date(endDate) FROM trip ''')
         result = cursor.fetchall()
         tripList = []
         for i in  range(len(result)):
             trip = result[i]
-            cursor.execute(f''' SELECT city, country FROM non_us_destination where trip_name = "{trip[0]}"''')
+            cursor.execute(f''' SELECT city, country FROM non_us_location where trip_name = "{trip[0]}"''')
             trip_result = cursor.fetchall()
             locations = []
             for location in trip_result:
@@ -29,7 +30,7 @@ def getTrips():
                 }
                 locations.append(l)
 
-            cursor.execute(f''' SELECT state, city, country FROM us_destination where trip_name = "{trip[0]}"''')
+            cursor.execute(f''' SELECT state, city, country FROM us_location where trip_name = "{trip[0]}"''')
             trip_result = cursor.fetchall()
             for location in trip_result:
                 l = {
@@ -55,13 +56,11 @@ def getTrips():
 @app.route("/trips/<string:trip_id>/itinerary", methods=['GET', 'POST'])
 def getTrip(trip_id):
     if request.method == 'GET':
-        #cursor.execute(f''' SELECT distinct(day) FROM stops WHERE trip_id = {trip_id}''')
-        cursor.execute(f''' SELECT distinct(day) FROM stops''')
+        cursor.execute(f''' SELECT distinct(day) FROM stops WHERE tripID = {trip_id}''')
         result = cursor.fetchall()
         trip = []
         for day in result:
-            #cursor.execute(f''' SELECT type, stop_name, city, state, notes FROM stops WHERE trip_id = {trip_id}, day = {day}''')
-            cursor.execute(f''' SELECT type, stop_name, city, state_region, notes FROM stops WHERE day = {day[0]}''')
+            cursor.execute(f''' SELECT type, stopName, city, state, notes FROM stops WHERE tripID = {trip_id}, day = {day}''')
             day_result = cursor.fetchall()
             places = []
             print(day_result)
