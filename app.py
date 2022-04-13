@@ -14,37 +14,36 @@ def hello():
 @app.route("/trips", methods=['GET', 'POST'])
 def getTrips():
     if request.method == 'GET': 
-        cursor.execute(''' SELECT title, date(startDate), date(endDate) FROM trip ''')
+        cursor.execute(''' SELECT title, date(startDate), date(endDate), id FROM trip ''')
         result = cursor.fetchall()
         tripList = []
         for i in  range(len(result)):
             trip = result[i]
-            cursor.execute(f''' SELECT city, country FROM non_us_location where trip_name = "{trip[0]}"''')
+            cursor.execute(f''' SELECT city, country FROM non_us_location where tripID = {trip[3]}''')
             trip_result = cursor.fetchall()
             locations = []
             for location in trip_result:
                 l = {
-                    'state': '',
+                    'state': 'N/A',
                     'city': location[0],
                     'country': location[1] 
                 }
                 locations.append(l)
 
-            cursor.execute(f''' SELECT state, city, country FROM us_location where trip_name = "{trip[0]}"''')
+            cursor.execute(f''' SELECT state, city, country FROM us_location where tripID = {trip[3]}''')
             trip_result = cursor.fetchall()
             for location in trip_result:
                 l = {
                     'state': location[0],
                     'city': location[1],
-                    'country': location[2] 
+                    'country': 'USA' 
                 }
                 locations.append(l)
-            
             tripList.append({
-                'id': i,
+                'id': trip[3],
                 'title': trip[0],
-                'startDate': trip[1].strftime("%m/%d/%y"),
-                'endDate': trip[2].strftime("%m/%d/%y"),
+                'startDate': None if trip[1] is None else trip[1].strftime("%m/%d/%y"),
+                'endDate':  None if trip[2] is None else trip[2].strftime("%m/%d/%y"),
                 'locations': locations
             })
         
@@ -60,10 +59,9 @@ def getTrip(trip_id):
         result = cursor.fetchall()
         trip = []
         for day in result:
-            cursor.execute(f''' SELECT type, stopName, city, state, notes FROM stops WHERE tripID = {trip_id}, day = {day}''')
+            cursor.execute(f''' SELECT type, stopName, city, stateRegion, notes FROM stops WHERE tripID = {trip_id} and day = {day[0]}''')
             day_result = cursor.fetchall()
             places = []
-            print(day_result)
             for stop in day_result:
                 places.append({
                     f"{stop[0]}" : {
@@ -73,8 +71,6 @@ def getTrip(trip_id):
                         'notes' : stop[4]
                     }
                 })
-            
-
             trip.append({
                 'day': day[0],
                 'places': places
