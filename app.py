@@ -1,11 +1,15 @@
 from flask import Flask, request
+import requests
 import pymysql
+import json
 
 app = Flask(__name__)
 
 con = pymysql.connect(host = 'vayk-database.c23p9o6zuvtv.us-east-1.rds.amazonaws.com', user = 'general', password = '[u{;J<r`{ssVb-54', database = 'VayK')
-#con = pymysql.connect(host = 'localhost', user = 'root', password = '', database = 'VayK')
 cursor = con.cursor()
+with open('keys.txt') as f:
+    api_key = f.readline()
+    f.close
 
 @app.route("/")
 def hello():
@@ -61,8 +65,10 @@ def getTrip(trip_id):
         for day in result:
             cursor.execute(f''' SELECT type, stopName, city, stateRegion, notes FROM stops WHERE tripID = {trip_id} and day = {day[0]}''')
             day_result = cursor.fetchall()
+            print(day_result)
             places = []
             for stop in day_result:
+                print(stop[0])
                 places.append({
                     f"{stop[0]}" : {
                         'name' : stop[1],
@@ -82,7 +88,30 @@ def getTrip(trip_id):
 
 @app.route("/trips/<string:trip_id>/map")
 def getTripMap(trip_id):
-    json_result = {'data': ''}
+    url_begin = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json?"
+    
+    cursor.execute(f''' SELECT stopName, day, eventNo FROM stops where tripID = {trip_id}''')
+    trip_result = cursor.fetchall()
+    print(trip_result)
+    stops = []
+    for stop in trip_result:
+        name = stop[0].replace(" ", "%20")
+        payload={}
+        headers = {}
+        url = url_begin+"input="+name+"&inputtype=textquery&fields=formatted_address%2Cname%2Crating%2Copening_hours%2Cgeometry&key="+api_key
+        response = json.loads(requests.request("GET", url, headers=headers, data=payload).text)["candidates"][0]
+       
+        l = {
+            'name': response["name"],
+            'lat': response["geometry"]["location"]["lat"],
+            'lng': response["geometry"]["location"]["lng"],
+            'day':stop[1],
+            'eventNo':stop[2]
+        }
+        stops.append(l)
+
+
+    json_result = {'data': stops}
     return json_result
 
 @app.route("/trips/<string:trip_id>/webpages")
