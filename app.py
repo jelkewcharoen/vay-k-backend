@@ -2,6 +2,19 @@ from flask import Flask, request
 import requests
 import pymysql
 import json
+import boto3
+import uuid
+
+access_key = 'AKIA3URWUJLY3UCV3S6C'
+access_secret = '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'
+bucket_name = 'vaykphotosbucket'
+
+# Connect to S3 client
+s3 = boto3.client(
+    's3',
+    aws_access_key_id = access_key,
+    aws_secret_access_key = access_secret
+)
 
 app = Flask(__name__)
 
@@ -56,35 +69,38 @@ def getTrips():
     if request.method == 'POST':
         cursor.execute(''' INSERT INTO trip () VALUES ()''')
 
-@app.route("/trips/<string:trip_id>/itinerary", methods=['GET', 'POST'])
+@app.route("/trips/<string:trip_id>/itinerary")
 def getTrip(trip_id):
-    if request.method == 'GET':
-        cursor.execute(f''' SELECT distinct(day) FROM stops WHERE tripID = {trip_id}''')
-        result = cursor.fetchall()
-        trip = []
-        for day in result:
-            cursor.execute(f''' SELECT type, stopName, city, stateRegion, notes FROM stops WHERE tripID = {trip_id} and day = {day[0]}''')
-            day_result = cursor.fetchall()
-            print(day_result)
-            places = []
-            for stop in day_result:
-                print(stop[0])
-                places.append({
-                    f"{stop[0]}" : {
-                        'name' : stop[1],
-                        'city' : stop[2],
-                        'state' : stop[3],
-                        'notes' : stop[4]
-                    }
-                })
-            trip.append({
-                'day': day[0],
-                'places': places
+    cursor.execute(f''' SELECT distinct(day) FROM stops WHERE tripID = {trip_id}''')
+    result = cursor.fetchall()
+    trip = []
+    for day in result:
+        cursor.execute(f''' SELECT type, stopName, city, stateRegion, notes FROM stops WHERE tripID = {trip_id} and day = {day[0]}''')
+        day_result = cursor.fetchall()
+        print(day_result)
+        places = []
+        for stop in day_result:
+            print(stop[0])
+            places.append({
+                f"{stop[0]}" : {
+                    'name' : stop[1],
+                    'city' : stop[2],
+                    'state' : stop[3],
+                    'notes' : stop[4]
+                }
             })
-        json_result = {'data': trip}
-        return json_result
+        trip.append({
+            'day': day[0],
+            'places': places
+        })
+    json_result = {'data': trip}
+    return json_result
+
+@app.route("/trips/<string:trip_id>/place", methods=['GET', 'POST'])
+def addPlace(trip_id):
     if request.method == 'POST':
         cursor.execute(''' INSERT INTO stops () VALUES ()''')
+        return redirect(url_for(f'trips/{trip_id}'))
 
 @app.route("/trips/<string:trip_id>/map")
 def getTripMap(trip_id):
@@ -133,6 +149,22 @@ def getTripLodges(trip_id):
 def getTripFlights(trip_id):
     json_result = {'data': ''}
     return json_result
+
+@app.route("/bookmark/add", methods=['GET', 'POST'])
+def addBookmark():
+    if True:
+        json_result = {'data': ''}
+        image_file = '/Users/jelke/Downloads/photo.jpeg'  # TODO replace path to pass image file here
+        unique_file_name = str(uuid.uuid4()) + ".png"
+        s3.upload_file (image_file, bucket_name,unique_file_name, ExtraArgs={'ContentType': "image/jpeg"})
+
+        #Save Url to db
+        photo_url = "https://%s.s3.amazonaws.com/%s" % ( bucket_name, unique_file_name)
+        #TODO insert statement to DB
+        #format insert (tripID = not null, photo_url = not null, description, isSaved = not null, day, eventNo)
+        #cursor.execute(''' INSERT INTO images () VALUES ()''')
+        print(photo_url)
+    return {}
 
 if __name__ == "__main__":
     app.run(debug = True)
