@@ -4,9 +4,14 @@ import pymysql
 import json
 import boto3
 import uuid
+from flask_cors import CORS
 
-access_key = 'AKIA3URWUJLY3UCV3S6C'
-access_secret = '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'
+with open('keys.txt') as f:
+    api_key = f.readline()
+    access_key = f.readline()
+    access_secret = f.readline()
+    f.close
+
 bucket_name = 'vaykphotosbucket'
 
 # Connect to S3 client
@@ -17,12 +22,11 @@ s3 = boto3.client(
 )
 
 app = Flask(__name__)
+cors = CORS(app, resources={r"/*": {"origins": "*"}})
 
 con = pymysql.connect(host = 'vayk-database.c23p9o6zuvtv.us-east-1.rds.amazonaws.com', user = 'general', password = '[u{;J<r`{ssVb-54', database = 'VayK')
 cursor = con.cursor()
-with open('keys.txt') as f:
-    api_key = f.readline()
-    f.close
+
 
 @app.route("/")
 def hello():
