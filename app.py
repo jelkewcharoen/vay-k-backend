@@ -33,6 +33,10 @@ cursor = con.cursor()
 def hello():
     return "Vay-K app"
 
+####################################################################################################
+#routes for frontend
+####################################################################################################
+
 @app.route("/trips", methods=['GET', 'POST'])
 def getTrips():
     if request.method == 'GET': 
@@ -94,7 +98,6 @@ def getTrip(trip_id):
                 }
             })
             for stop in stops:
-                print(stop[0])
                 places.append({
                     f"{stop[0]}" : {
                         'name' : stop[1],
@@ -115,14 +118,12 @@ def addPlace(trip_id):
     if request.method == 'POST':
         info = request.form
         place_type = info['type']
-        if place_type == 'city':
-            cursor.execute(''' INSERT INTO us_location () VALUES ()''')
-        else:
-            day = info['tripDay']
-            eventID = info['placeAt']
-            placeName = info['place']['name']
-            notes = info['place']['details']
-            cursor.execute(''' INSERT INTO stops (tripID, day, eventNo, type) VALUES ()''')
+        day = info['tripDay']
+        eventID = info['placeAt']
+        placeName = info['place']['name']
+        notes = info['place']['details']
+        cursor.execute(f''' UPDATE stops SET eventNo = eventNo+1 where eventNo >= {eventID} and tripID = {tripID} and day = {day} order by eventID DESC''')
+        cursor.execute(f''' INSERT INTO stops (tripID, day, eventNo, type, notes) VALUES ({tripID}, {day}, {eventNo}, "{place_type}", "{notes}")''')
     return redirect(url_for(f'trips/{trip_id}'))
 
 @app.route("/trips/<string:trip_id>/map")
@@ -131,7 +132,6 @@ def getTripMap(trip_id):
     
     cursor.execute(f''' SELECT stopName, day, eventNo FROM stops where tripID = {trip_id}''')
     trip_result = cursor.fetchall()
-    print(trip_result)
     stops = []
     for stop in trip_result:
         name = stop[0].replace(" ", "%20")
@@ -153,15 +153,48 @@ def getTripMap(trip_id):
     json_result = {'data': stops}
     return json_result
 
-@app.route("/trips/<string:trip_id>/webpages")
+@app.route("/trips/<string:trip_id>/webpages", methods=['GET', 'POST'])
 def getTripWebpages(trip_id):
-    json_result = {'data': ''}
-    return json_result
+    if request.method == 'GET':
+        cursor.execute(f''' SELECT title, website, description, id FROM extension_info where tripID = {trip_id} and isSaved = false''')
+        result = cursor.fetchall()
+        webpages = []
+        for webpage in result:
+            webpages.append({
+                'title':webpage[0],
+                'url':webpage[1],
+                'description':webpage[2],
+                'id':webpage[3]
+            })
+        json_result = {'data': webpages}
+        return json_result
+    if request.method == 'POST' :
+        info = request.form
+        webpage_id = info['id']
+        stop_id = info['stopId']
+        cursor.execute(f''' UPDATE SET isSaved = true and eventNo = {stop_id} FROM extension_info where tripID = {trip_id} and id = {webpage_id}''')
+        return "Added webpage to stop"
+    
 
-@app.route("/trips/<string:trip_id>/photos")
+@app.route("/trips/<string:trip_id>/photos", methods=['GET', 'POST'])
 def getTripPhotos(trip_id):
-    json_result = {'data': ''}
-    return json_result
+    if request.method == 'GET':
+        cursor.execute(f''' SELECT url, description FROM images where tripID = {trip_id} and isSaved = false''')
+        result = cursor.fetchall()
+        photos = []
+        for photo in result:
+            photos.append({
+                'url':photo[0],
+                'description':photo[1]
+            })
+        json_result = {'data': photos}
+        return json_result
+    if request.method == 'POST':
+        info = request.form
+        url = info['url']
+        stop_id = info['stopId']
+        cursor.execute(f''' UPDATE SET isSaved = true and eventNo = {stop_id} FROM images where tripID = {trip_id} and url = {url}''')
+        return "Added photo to stop"
 
 @app.route("/trips/<string:trip_id>/lodges")
 def getTripLodges(trip_id):
@@ -173,10 +206,15 @@ def getTripFlights(trip_id):
     json_result = {'data': ''}
     return json_result
 
-@app.route("/bookmark/add", methods=['GET', 'POST'])
-def addBookmark():
+####################################################################################################
+#routes for chrome extension
+####################################################################################################
+
+
+@app.route("/add/photo/<string:trip_id>", methods=['GET', 'POST'])
+def addPhotoBookmark(trip_id):
+    result = {}
     if True:
-        json_result = {'data': ''}
         image_file = '/Users/jelke/Downloads/Photo.jpeg'  # TODO replace path to pass image file here
         unique_file_name = str(uuid.uuid4()) + ".png"
         s3.upload_file (image_file, bucket_name,unique_file_name, ExtraArgs={'ContentType': "image/jpeg"})
@@ -185,9 +223,21 @@ def addBookmark():
         photo_url = "https://%s.s3.amazonaws.com/%s" % ( bucket_name, unique_file_name)
         #TODO insert statement to DB
         #format insert (tripID = not null, photo_url = not null, description, isSaved = not null, day, eventNo)
-        #cursor.execute(''' INSERT INTO images () VALUES ()''')
-        print(photo_url)
-    return {}
+        cursor.execute(f''' INSERT INTO images (tripID, url) VALUES ({trip_id}, "{photo_url}")''')
+        result.update({
+            'data': photo_url
+        })
+    return result
+
+@app.route("/add/webpage/<string:trip_id>", methods=['GET', 'POST'])
+def addWebpageBookmark(trip_id):
+    if True:
+        #Save Url to db
+        title = "webpage"
+        webpage_url = "www.something.com"
+        #TODO insert statement to DB
+        cursor.execute(f''' INSERT INTO extension_info (tripID, title, website) VALUES ({trip_id}, "{title}", "{webpage_url}")''')
+    return {'data': webpage_url}
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", debug = True)
