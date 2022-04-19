@@ -9,6 +9,7 @@ from flask_cors import CORS
 with open('keys.txt') as f:
     api_key = f.readline()
     access_key = f.readline()
+    access_key = access_key[:-1]
     access_secret = f.readline()
     f.close
 
@@ -158,7 +159,7 @@ def getTripFlights(trip_id):
 def addBookmark():
     if True:
         json_result = {'data': ''}
-        image_file = '/Users/jelke/Downloads/photo.jpeg'  # TODO replace path to pass image file here
+        image_file = '/Users/jelke/Downloads/Photo.jpeg'  # TODO replace path to pass image file here
         unique_file_name = str(uuid.uuid4()) + ".png"
         s3.upload_file (image_file, bucket_name,unique_file_name, ExtraArgs={'ContentType': "image/jpeg"})
 
