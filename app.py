@@ -33,9 +33,11 @@ s3 = boto3.client(
 app = Flask(__name__)
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
 
-con = pymysql.connect(host = 'vayk-database.c23p9o6zuvtv.us-east-1.rds.amazonaws.com', user = 'general', password = '[u{;J<r`{ssVb-54', database = 'VayK')
-cursor = con.cursor()
-
+#SQL set up
+host = 'vayk-database.c23p9o6zuvtv.us-east-1.rds.amazonaws.com'
+user = 'general'
+pwd = '[u{;J<r`{ssVb-54'
+database = 'VayK'
 
 @app.route("/")
 def hello():
@@ -47,6 +49,8 @@ def hello():
 
 @app.route("/trips", methods=['GET', 'POST'])
 def getTrips():
+    con = pymysql.connect(host = host, user = user, password = pwd, database = database)
+    cursor = con.cursor()
     if request.method == 'GET': 
         cursor.execute(''' SELECT title, date(startDate), date(endDate), id FROM trip ''')
         result = cursor.fetchall()
@@ -80,14 +84,23 @@ def getTrips():
                 'endDate':  None if trip[2] is None else trip[2].strftime("%m/%d/%y"),
                 'locations': locations
             })
-        
         json_result = {"data": tripList}
+        cursor.close()
+        con.close()
         return json_result
+        
     if request.method == 'POST':
         cursor.execute(''' INSERT INTO trip () VALUES ()''')
+        con.commit()
+        cursor.close()
+        con.close()
+        return "add trip"
+    
 
 @app.route("/trips/<string:trip_id>/itinerary")
 def getTrip(trip_id):
+    con = pymysql.connect(host = host, user = user, password = pwd, database = database)
+    cursor = con.cursor()
     cursor.execute(f''' SELECT distinct(day) FROM stops WHERE tripID = {trip_id}''')
     result = cursor.fetchall()
     trip = []
@@ -119,10 +132,14 @@ def getTrip(trip_id):
             'places': places
         })
     json_result = {'data': trip}
+    cursor.close()
+    con.close()
     return json_result
 
 @app.route("/trips/<string:trip_id>/place", methods=['GET', 'POST'])
 def addPlace(trip_id):
+    con = pymysql.connect(host = host, user = user, password = pwd, database = database)
+    cursor = con.cursor()
     if request.method == 'POST':
         info = request.form
         place_type = info['type']
@@ -132,12 +149,16 @@ def addPlace(trip_id):
         notes = info['place']['details']
         cursor.execute(f''' UPDATE stops SET eventNo = eventNo+1 where eventNo >= {eventID} and tripID = {tripID} and day = {day} order by eventID DESC''')
         cursor.execute(f''' INSERT INTO stops (tripID, day, eventNo, type, notes) VALUES ({tripID}, {day}, {eventNo}, "{place_type}", "{notes}")''')
-    return redirect(url_for(f'trips/{trip_id}'))
+        con.commit()
+    cursor.close()
+    con.close()
+    return "add stop"
 
 @app.route("/trips/<string:trip_id>/map")
 def getTripMap(trip_id):
     url_begin = "https://maps.googleapis.com/maps/api/place/findplacefromtext/json?"
-    
+    con = pymysql.connect(host = host, user = user, password = pwd, database = database)
+    cursor = con.cursor()
     cursor.execute(f''' SELECT stopName, day, eventNo FROM stops where tripID = {trip_id}''')
     trip_result = cursor.fetchall()
     stops = []
@@ -156,13 +177,15 @@ def getTripMap(trip_id):
             'eventNo':stop[2]
         }
         stops.append(l)
-
-
+    cursor.close()
+    con.close()
     json_result = {'data': stops}
     return json_result
 
 @app.route("/trips/<string:trip_id>/webpages", methods=['GET', 'POST'])
 def getTripWebpages(trip_id):
+    con = pymysql.connect(host = host, user = user, password = pwd, database = database)
+    cursor = con.cursor()
     if request.method == 'GET':
         cursor.execute(f''' SELECT title, website, description, id FROM extension_info where tripID = {trip_id} and isSaved = false''')
         result = cursor.fetchall()
@@ -175,17 +198,24 @@ def getTripWebpages(trip_id):
                 'id':webpage[3]
             })
         json_result = {'data': webpages}
+        cursor.close()
+        con.close()
         return json_result
     if request.method == 'POST' :
         info = request.form
         webpage_id = info['id']
         stop_id = info['stopId']
         cursor.execute(f''' UPDATE SET isSaved = true and eventNo = {stop_id} FROM extension_info where tripID = {trip_id} and id = {webpage_id}''')
+        con.commit()
+        cursor.close()
+        con.close()
         return "Added webpage to stop"
     
 
 @app.route("/trips/<string:trip_id>/photos", methods=['GET', 'POST'])
 def getTripPhotos(trip_id):
+    con = pymysql.connect(host = host, user = user, password = pwd, database = database)
+    cursor = con.cursor()
     if request.method == 'GET':
         cursor.execute(f''' SELECT url, description FROM images where tripID = {trip_id} and isSaved = false''')
         result = cursor.fetchall()
@@ -196,12 +226,17 @@ def getTripPhotos(trip_id):
                 'description':photo[1]
             })
         json_result = {'data': photos}
+        cursor.close()
+        con.close()
         return json_result
     if request.method == 'POST':
         info = request.form
         url = info['url']
         stop_id = info['stopId']
         cursor.execute(f''' UPDATE SET isSaved = true and eventNo = {stop_id} FROM images where tripID = {trip_id} and url = {url}''')
+        con.commit()
+        cursor.close()
+        con.close()
         return "Added photo to stop"
 
 @app.route("/trips/<string:trip_id>/lodges")
@@ -231,7 +266,12 @@ def addPhotoBookmark(trip_id):
         photo_url = "https://%s.s3.amazonaws.com/%s" % ( bucket_name, unique_file_name)
         #TODO insert statement to DB
         #format insert (tripID = not null, photo_url = not null, description, isSaved = not null, day, eventNo)
+        con = pymysql.connect(host = host, user = user, password = pwd, database = database)
+        cursor = con.cursor()
         cursor.execute(f''' INSERT INTO images (tripID, url) VALUES ({trip_id}, "{photo_url}")''')
+        con.commit()
+        cursor.close()
+        con.close()
         result.update({
             'data': photo_url
         })
@@ -244,7 +284,12 @@ def addWebpageBookmark(trip_id):
         title = "webpage"
         webpage_url = "www.something.com"
         #TODO insert statement to DB
+        con = pymysql.connect(host = host, user = user, password = pwd, database = database)
+        cursor = con.cursor()
         cursor.execute(f''' INSERT INTO extension_info (tripID, title, website) VALUES ({trip_id}, "{title}", "{webpage_url}")''')
+        con.commit()
+        cursor.close()
+        con.close()
     return {'data': webpage_url}
 
 if __name__ == "__main__":
