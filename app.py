@@ -85,10 +85,8 @@ def getTrip(trip_id):
         cities = cursor.fetchall()
         places = []
         for city in cities:
-            cursor.execute(f''' SELECT type, stopName, notes FROM stops WHERE tripID = {trip_id} and day = {day[0]} and city = "{city[0]}" and stateRegion = "{city[1]}" and postalCode = "{city[2]}" order by eventNo''')
+            cursor.execute(f''' SELECT type, stopName, notes, eventNo FROM stops WHERE tripID = {trip_id} and day = {day[0]} and city = "{city[0]}" and stateRegion = "{city[1]}" and postalCode = "{city[2]}" order by eventNo''')
             stops = cursor.fetchall()
-            print(stops)
-            
             places.append({
                 'city': {
                     'name':city[0],
@@ -100,7 +98,8 @@ def getTrip(trip_id):
                 places.append({
                     f"{stop[0]}" : {
                         'name' : stop[1],
-                        'details' : stop[2]
+                        'details' : stop[2],
+                        'eventNo': stop[3]
                     }
                 })
 
@@ -191,4 +190,4 @@ def addBookmark():
     return {}
 
 if __name__ == "__main__":
-    app.run(debug = True)
+    app.run(host="0.0.0.0", debug = True)
