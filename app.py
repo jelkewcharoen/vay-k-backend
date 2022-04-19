@@ -5,13 +5,21 @@ import json
 import boto3
 import uuid
 from flask_cors import CORS
+import os
+is_prod = os.environ.get('IS_HEROKU', None)
 
-with open('keys.txt') as f:
-    api_key = f.readline()
-    access_key = f.readline()
-    access_key = access_key[:-1]
-    access_secret = f.readline()
-    f.close
+if is_prod:
+    api_key = os.environ['GOOGLE_API_KEY']
+    access_key = os.environ['AWS_ACCESS_KEY']
+    access_secret = os.environ['AWS_ACCESS_SECRET']
+
+else:
+    with open('keys.txt') as f:
+        api_key = f.readline()
+        access_key = f.readline()
+        access_key = access_key[:-1]
+        access_secret = f.readline()
+        f.close
 
 bucket_name = 'vaykphotosbucket'
 
