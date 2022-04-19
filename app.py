@@ -79,21 +79,31 @@ def getTrip(trip_id):
     cursor.execute(f''' SELECT distinct(day) FROM stops WHERE tripID = {trip_id}''')
     result = cursor.fetchall()
     trip = []
+    #iterate through each day
     for day in result:
-        cursor.execute(f''' SELECT type, stopName, city, stateRegion, notes FROM stops WHERE tripID = {trip_id} and day = {day[0]}''')
-        day_result = cursor.fetchall()
-        print(day_result)
+        cursor.execute(f''' SELECT distinct city, stateRegion, postalCode FROM stops WHERE tripID = {trip_id} and day = {day[0]} order by eventNo''')
+        cities = cursor.fetchall()
         places = []
-        for stop in day_result:
-            print(stop[0])
+        for city in cities:
+            cursor.execute(f''' SELECT type, stopName, notes FROM stops WHERE tripID = {trip_id} and day = {day[0]} and city = "{city[0]}" and stateRegion = "{city[1]}" and postalCode = "{city[2]}" order by eventNo''')
+            stops = cursor.fetchall()
+            print(stops)
+            
             places.append({
-                f"{stop[0]}" : {
-                    'name' : stop[1],
-                    'city' : stop[2],
-                    'state' : stop[3],
-                    'notes' : stop[4]
+                'city': {
+                    'name':city[0],
+                    'state':city[1]
                 }
             })
+            for stop in stops:
+                print(stop[0])
+                places.append({
+                    f"{stop[0]}" : {
+                        'name' : stop[1],
+                        'details' : stop[2]
+                    }
+                })
+
         trip.append({
             'day': day[0],
             'places': places
@@ -104,8 +114,17 @@ def getTrip(trip_id):
 @app.route("/trips/<string:trip_id>/place", methods=['GET', 'POST'])
 def addPlace(trip_id):
     if request.method == 'POST':
-        cursor.execute(''' INSERT INTO stops () VALUES ()''')
-        return redirect(url_for(f'trips/{trip_id}'))
+        info = request.form
+        place_type = info['type']
+        if place_type == 'city':
+            cursor.execute(''' INSERT INTO us_location () VALUES ()''')
+        else:
+            day = info['tripDay']
+            eventID = info['placeAt']
+            placeName = info['place']['name']
+            notes = info['place']['details']
+            cursor.execute(''' INSERT INTO stops (tripID, day, eventNo, type) VALUES ()''')
+    return redirect(url_for(f'trips/{trip_id}'))
 
 @app.route("/trips/<string:trip_id>/map")
 def getTripMap(trip_id):
