@@ -4,6 +4,7 @@ import pymysql
 import json
 import boto3
 import uuid
+from bs4 import BeautifulSoup
 from flask_cors import CORS
 import os
 is_prod = os.environ.get('IS_HEROKU', None)
@@ -258,7 +259,8 @@ def getTripFlights(trip_id):
 def addPhotoBookmark(trip_id):
     result = {}
     if True:
-        image_file = '/Users/jelke/Downloads/Photo.jpeg'  # TODO replace path to pass image file here
+        #image_file = info['data']
+        image_file = '/Users/jelke/Downloads/Photo.jpeg'
         unique_file_name = str(uuid.uuid4()) + ".png"
         s3.upload_file (image_file, bucket_name,unique_file_name, ExtraArgs={'ContentType': "image/jpeg"})
 
@@ -280,17 +282,21 @@ def addPhotoBookmark(trip_id):
 @app.route("/add/webpage/<string:trip_id>", methods=['GET', 'POST'])
 def addWebpageBookmark(trip_id):
     if True:
+        info = request.form
         #Save Url to db
-        title = "webpage"
-        webpage_url = "www.something.com"
-        #TODO insert statement to DB
+        #webpage_url = info['data']
+        webpage_url= "https://www.geeksforgeeks.org/extract-title-from-a-webpage-using-python/"
+        reqs = requests.get(webpage_url)
+        soup = BeautifulSoup(reqs.text, 'html.parser')
+        for title in soup.find_all('title'):
+            title = title.get_text()
         con = pymysql.connect(host = host, user = user, password = pwd, database = database)
         cursor = con.cursor()
         cursor.execute(f''' INSERT INTO extension_info (tripID, title, website) VALUES ({trip_id}, "{title}", "{webpage_url}")''')
         con.commit()
         cursor.close()
         con.close()
-    return {'data': webpage_url}
+    return {'data': title}
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", debug = True)
