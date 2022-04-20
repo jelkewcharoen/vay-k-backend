@@ -148,8 +148,8 @@ def addPlace(trip_id):
         eventID = info['placeAt']
         placeName = info['place']['name']
         notes = info['place']['details']
-        cursor.execute(f''' UPDATE stops SET eventNo = eventNo+1 where eventNo >= {eventID} and tripID = {tripID} and day = {day} order by eventID DESC''')
-        cursor.execute(f''' INSERT INTO stops (tripID, day, eventNo, type, notes) VALUES ({tripID}, {day}, {eventNo}, "{place_type}", "{notes}")''')
+        cursor.execute(f''' UPDATE stops SET eventNo = eventNo+1 where eventNo >= {eventID} and tripID = {trip_id} and day = {day} order by eventID DESC''')
+        cursor.execute(f''' INSERT INTO stops (tripID, day, eventNo, type, notes) VALUES ({trip_id}, {day}, {eventID}, "{place_type}", "{notes}")''')
         con.commit()
     cursor.close()
     con.close()
